@@ -1,7 +1,7 @@
 const express    = require('express');
 const path       = require('path');
 const mysql      = require('mysql');
-const PDFDocument= require('pdfkit');
+
 const moment     = require('moment');
 
 const app = express();
@@ -198,57 +198,8 @@ app.post('/smazat-zakazku', (req, res) => {
   });
 });
 
-/* ===== PDF routa ===== */
-app.get('/zakazka-pdf/:id', (req, res) => {
-  const zakId = req.params.id;
-  const sqlH = `
-    SELECT z.id, z.datum, z.celkova_cena,
-           k.jmeno, k.email, k.telefon, k.adresa
-    FROM zakazky z
-    JOIN zakaznici k ON z.zakaznik_id = k.id
-    WHERE z.id = ?
-  `;
-  db.query(sqlH, [zakId], (e1, hdr) => {
-    if (e1 || hdr.length === 0) return res.status(404).send('Nenalezena');
-    const h = hdr[0];
-    const sqlI = `
-      SELECT m.nazev, zm.mnozstvi, zm.cena
-      FROM zakazka_materialy zm
-      JOIN materialy m ON zm.material_id = m.id
-      WHERE zm.zakazka_id = ?
-    `;
-    db.query(sqlI, [zakId], (e2, items) => {
-      if (e2) return res.status(500).send('Chyba');
-      const doc = new PDFDocument({ margin: 40, size: 'A4' });
-      res.setHeader('Content-disposition', `inline; filename=zak_${zakId}.pdf`);
-      res.setHeader('Content-type', 'application/pdf');
-      doc.pipe(res);
-      doc.fontSize(20).text(`Zakázka #${h.id}`, { align: 'center' }).moveDown();
-      doc.fontSize(12)
-         .text(`Datum: ${moment(h.datum).format('DD.MM.YYYY')}`)
-         .text(`Zákazník: ${h.jmeno}`)
-         .text(`Email: ${h.email||'–'}`)
-         .text(`Telefon: ${h.telefon||'–'}`)
-         .text(`Adresa: ${h.adresa||'–'}`)
-         .moveDown();
-      doc.fontSize(14).text('Položky:', { underline: true }).moveDown(0.5);
-      const y0 = doc.y, cols = { naz:50, mno:330, cen:430 };
-      doc.fontSize(12).text('Název',cols.naz,y0).text('Množství',cols.mno,y0).text('Cena',cols.cen,y0);
-      doc.moveTo(50,y0+15).lineTo(550,y0+15).stroke();
-      let y = y0 + 20;
-      items.forEach(it => {
-        doc.text(it.nazev,cols.naz,y)
-           .text(it.mnozstvi.toString(),cols.mno,y)
-           .text(it.cena.toFixed(2),cols.cen,y);
-        y += 20;
-      });
-      doc.moveDown().fontSize(14)
-         .text(`Celkem: ${h.celkova_cena.toFixed(2)} Kč`, { align: 'right' });
-      doc.end();
-    });
-  });
-});
 
+// jediná deklarace PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server běží na portu ${PORT}`);
