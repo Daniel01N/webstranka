@@ -8,13 +8,20 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'views')));
 
-// připojení k DB pomocí Railway ENV proměnných
+// (volitelně, pro lokální .env soubor)
+// require('dotenv').config();
+
 const db = mysql.createConnection({
   host:     process.env.MYSQL_HOST,
+  port:     process.env.MYSQL_PORT,
   user:     process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server běží na portu ${PORT}`));
+
 db.connect(err => {
   if (err) {
     console.error('❌ Chyba DB:', err);
