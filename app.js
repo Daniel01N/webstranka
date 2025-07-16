@@ -10,11 +10,9 @@ app.use(express.static(path.join(__dirname, 'views')));
 
 // (volitelně, pro lokální .env soubor)
 // require('dotenv').config();
-
 // nahoře: načtení dotenv (pro lokální .env soubor)
 require('dotenv').config();
 
-const mysql = require('mysql');
 
 const db = mysql.createConnection({
   host:     process.env.MYSQL_HOST,
