@@ -11,24 +11,28 @@ app.use(express.static(path.join(__dirname, 'views')));
 // (volitelně, pro lokální .env soubor)
 // require('dotenv').config();
 
+// nahoře: načtení dotenv (pro lokální .env soubor)
+require('dotenv').config();
+
+const mysql = require('mysql');
+
 const db = mysql.createConnection({
   host:     process.env.MYSQL_HOST,
-  port:     process.env.MYSQL_PORT,
+  port:     process.env.MYSQL_PORT || 3306,
   user:     process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server běží na portu ${PORT}`));
 
 db.connect(err => {
   if (err) {
     console.error('❌ Chyba DB:', err);
     process.exit(1);
   }
-  console.log('✅ Připojeno k DB');
+  console.log('✅ Připojeno k DB na',
+    `${process.env.MYSQL_HOST}:${process.env.MYSQL_PORT || 3306}`);
 });
+
 
 /* ===== API: MATERIALY ===== */
 app.get('/api/materialy', (req, res) => {
@@ -198,3 +202,8 @@ app.post('/smazat-zakazku', (req, res) => {
     });
   });
 });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server běží na portu ${PORT}`);
+});
+
