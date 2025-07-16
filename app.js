@@ -1,19 +1,24 @@
-const express    = require('express');
-const path       = require('path');
-const mysql      = require('mysql');
+// 1) Načtení .env pro lokální testy (Railway to ignoruje)
+require('dotenv').config();
 
-const moment     = require('moment');
+const express = require('express');
+const path    = require('path');
+const mysql   = require('mysql');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'views')));
 
-// (volitelně, pro lokální .env soubor)
-// require('dotenv').config();
-// nahoře: načtení dotenv (pro lokální .env soubor)
-require('dotenv').config();
+// → Debug výpis načtených ENV (volitelné, pomůže ověřit nastavení)
+console.log('🔧 ENV CONFIG:', {
+  MYSQL_HOST:     process.env.MYSQL_HOST,
+  MYSQL_PORT:     process.env.MYSQL_PORT,
+  MYSQL_USER:     process.env.MYSQL_USER,
+  MYSQL_DATABASE: process.env.MYSQL_DATABASE,
+  PORT:           process.env.PORT
+});
 
-
+// 2) Připojení k MySQL výhradně přes ENV proměnné
 const db = mysql.createConnection({
   host:     process.env.MYSQL_HOST,
   port:     process.env.MYSQL_PORT || 3306,
@@ -27,10 +32,11 @@ db.connect(err => {
     console.error('❌ Chyba DB:', err);
     process.exit(1);
   }
-  console.log('✅ Připojeno k DB na',
-    `${process.env.MYSQL_HOST}:${process.env.MYSQL_PORT || 3306}`);
+  console.log(
+    '✅ Připojeno k DB na',
+    `${process.env.MYSQL_HOST}:${process.env.MYSQL_PORT || 3306}`
+  );
 });
-
 
 /* ===== API: MATERIALY ===== */
 app.get('/api/materialy', (req, res) => {
@@ -82,7 +88,7 @@ app.post('/pridat-do-skladu', (req, res) => {
     (err, result) => {
       if (err) return res.status(500).send(err.sqlMessage);
       const cenaJednotkova = result[0].cena_za_jednotku;
-      const celkovaCena    = cenaJednotkova * parseFloat(mnozstvi);
+      const celkovaCena   = cenaJednotkova * parseFloat(mnozstvi);
       db.query(
         'INSERT INTO sklad (material_id, mnozstvi, celkova_cena) VALUES (?, ?, ?)',
         [material_id, mnozstvi, celkovaCena],
@@ -152,10 +158,11 @@ app.get('/api/zakazky', (req, res) => {
 });
 
 app.post('/pridat-zakazku', (req, res) => {
-  let { zakaznik_id, datum, celkova_cena, material_id, mnozstvi } = req.body;
+  let { zakaznik_id, datum, celkova_cena, material_id, mnozstvi } =
+    req.body;
   if (material_id && !Array.isArray(material_id)) {
     material_id = [material_id];
-    mnozstvi   = [mnozstvi];
+    mnozstvi    = [mnozstvi];
   }
   db.query(
     'INSERT INTO zakazky (zakaznik_id, datum, celkova_cena) VALUES (?, ?, ?)',
@@ -190,18 +197,20 @@ app.post('/pridat-zakazku', (req, res) => {
   );
 });
 
-// Fix: Move this route outside of the previous route
 app.post('/smazat-zakazku', (req, res) => {
   const { id } = req.body;
   db.query('DELETE FROM zakazky WHERE id = ?', [id], err => {
     if (err) return res.status(500).send(err.sqlMessage);
-    db.query('DELETE FROM zakazka_materialy WHERE zakazka_id = ?', [id], () => {
-      res.redirect('/zakazky.html');
-    });
+    db.query(
+      'DELETE FROM zakazka_materialy WHERE zakazka_id = ?',
+      [id],
+      () => res.redirect('/zakazky.html')
+    );
   });
 });
+
+// 3) Jediná deklarace PORT a spuštění serveru
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server běží na portu ${PORT}`);
 });
-
