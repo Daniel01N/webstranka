@@ -249,7 +249,7 @@ app.get('/zakazka-pdf/:id', (req, res) => {
   });
 });
 
-// spuštění
-app.listen(process.env.PORT||3000, () => {
-  console.log('🚀 Server běží…');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server běží na portu ${PORT}`);
 });
