@@ -188,6 +188,7 @@ app.post('/pridat-zakazku', (req, res) => {
   );
 });
 
+// Fix: Move this route outside of the previous route
 app.post('/smazat-zakazku', (req, res) => {
   const { id } = req.body;
   db.query('DELETE FROM zakazky WHERE id = ?', [id], err => {
@@ -196,11 +197,4 @@ app.post('/smazat-zakazku', (req, res) => {
       res.redirect('/zakazky.html');
     });
   });
-});
-
-
-// jediná deklarace PORT
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server běží na portu ${PORT}`);
 });

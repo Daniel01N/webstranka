@@ -90,12 +90,3 @@ main.container {
   max-width:200px; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis;
 }
-.btn-pdf,
-.btn-delete {
-  background:transparent; border:none;
-  cursor:pointer; font-size:1.2rem;
-}
-.btn-pdf { color:var(--clr-primary); }
-.btn-pdf:hover { color:var(--clr-accent); }
-.btn-delete { color:var(--clr-text); }
-.btn-delete:hover { color:var(--clr-accent); }
