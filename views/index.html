@@ -1,0 +1,83 @@
+<!-- File: views/index.html -->
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ElektroSpráva</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Grid a karty pro úvodní stránku */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .card {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: 4px;
+      padding: 1rem;
+      text-decoration: none;
+      color: var(--clr-text);
+      transition: background .2s, transform .2s;
+    }
+    .card:hover {
+      background: var(--clr-border);
+      transform: translateY(-3px);
+    }
+    .card .icon-small {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--clr-accent);
+    }
+    .card h3 {
+      margin: 0.25rem 0;
+      font-size: 1.1rem;
+    }
+    .card p {
+      font-size: 0.9rem;
+      color: var(--clr-text);
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="icon">⚡</span> ElektroSpráva
+    <nav>
+      <a href="/">Domů</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Vítejte v ElektroSpráva</h1>
+    <p>Kompletní nástroj pro správu materiálů, skladu, zákazníků a zakázek ve vaší elektro dílně.</p>
+
+    <div class="dashboard-grid">
+      <a href="materialy.html" class="card">
+        <span class="icon-small">🔧</span>
+        <h3>Materiály</h3>
+        <p>Spravujte názvy, ceny a jednotky</p>
+      </a>
+      <a href="sklad.html" class="card">
+        <span class="icon-small">📦</span>
+        <h3>Sklad</h3>
+        <p>Přidávejte a odebírejte položky</p>
+      </a>
+      <a href="zakaznici.html" class="card">
+        <span class="icon-small">👥</span>
+        <h3>Zákazníci</h3>
+        <p>Evidence kontaktů a adres</p>
+      </a>
+      <a href="zakazky.html" class="card">
+        <span class="icon-small">📋</span>
+        <h3>Zakázky</h3>
+        <p>Vytvářejte a spravujte zakázky</p>
+      </a>
+    </div>
+  </main>
+</body>
+</html>

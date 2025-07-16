@@ -1,0 +1,79 @@
+<!-- File: views/materialy.html -->
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Materiály – ElektroSpráva</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <span class="icon">⚡</span> ElektroSpráva – Materiály
+    <nav><a href="/">Domů</a></nav>
+  </header>
+
+  <main class="container">
+    <section class="form-section">
+      <form action="/pridat-material" method="POST">
+        <label for="nazev">Název materiálu</label>
+        <input id="nazev" name="nazev" required>
+
+        <label for="cena">Cena za jednotku (Kč)</label>
+        <input id="cena" name="cena" type="number" step="0.01" required>
+
+        <label for="jednotka">Jednotka</label>
+        <input id="jednotka" name="jednotka" required>
+
+        <button type="submit">➕ Přidat materiál</button>
+      </form>
+    </section>
+
+    <section class="table-section">
+      <h2>Seznam materiálů</h2>
+      <div id="materialyList">Načítám…</div>
+    </section>
+  </main>
+
+  <script>
+    fetch('/api/materialy')
+      .then(res => res.json())
+      .then(data => {
+        const c = document.getElementById('materialyList');
+        c.innerHTML = '';
+        const t = document.createElement('table');
+        const h = document.createElement('tr');
+        ['ID','Název','Cena','Jednotka','Akce']
+          .forEach(txt => {
+            const th = document.createElement('th');
+            th.textContent = txt;
+            h.appendChild(th);
+          });
+        t.appendChild(h);
+
+        data.forEach(m => {
+          const tr = document.createElement('tr');
+          [m.id, m.nazev, m.cena_za_jednotku, m.jednotka]
+            .forEach(v => {
+              const td = document.createElement('td');
+              td.textContent = v;
+              tr.appendChild(td);
+            });
+          const td = document.createElement('td');
+          td.innerHTML = `
+            <form action="/smazat-material" method="POST">
+              <input type="hidden" name="id" value="${m.id}">
+              <button class="btn-delete">🗑️</button>
+            </form>`;
+          tr.appendChild(td);
+          t.appendChild(tr);
+        });
+        c.appendChild(t);
+      })
+      .catch(() => {
+        document.getElementById('materialyList')
+                .textContent = 'Chyba při načítání.';
+      });
+  </script>
+</body>
+</html>

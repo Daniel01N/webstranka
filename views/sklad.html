@@ -1,0 +1,84 @@
+<!-- File: views/sklad.html -->
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sklad – ElektroSpráva</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <span class="icon">⚡</span> ElektroSpráva – Sklad
+    <nav><a href="/">Domů</a></nav>
+  </header>
+
+  <main class="container">
+    <section class="form-section">
+      <form action="/pridat-do-skladu" method="POST">
+        <label for="material">Materiál</label>
+        <select id="material" name="material_id" required>
+          <option value="">Načítám…</option>
+        </select>
+
+        <label for="mnozstvi">Množství</label>
+        <input id="mnozstvi" name="mnozstvi" type="number" min="1" required>
+
+        <button type="submit">➕ Přidat do skladu</button>
+      </form>
+    </section>
+
+    <section class="table-section">
+      <h2>Položky ve skladu</h2>
+      <div id="skladList">Načítám…</div>
+    </section>
+  </main>
+
+  <script>
+    Promise.all([
+      fetch('/api/materialy').then(r => r.json()),
+      fetch('/api/sklad').then(r => r.json())
+    ]).then(([mats, skl]) => {
+      const sel = document.querySelector('select[name=material_id]');
+      sel.innerHTML = '<option value="">Vyber materiál</option>';
+      mats.forEach(m => {
+        const o = document.createElement('option');
+        o.value = m.id;
+        o.textContent = `${m.nazev} (${m.jednotka})`;
+        sel.appendChild(o);
+      });
+
+      const c = document.getElementById('skladList');
+      c.innerHTML = '';
+      const t = document.createElement('table');
+      const h = document.createElement('tr');
+      ['ID','Materiál','Množství','Cena/jedn','Jednotka','Celkem','Akce']
+        .forEach(txt => {
+          const th = document.createElement('th');
+          th.textContent = txt;
+          h.appendChild(th);
+        });
+      t.appendChild(h);
+
+      skl.forEach(s => {
+        const tr = document.createElement('tr');
+        [s.id, s.nazev, s.mnozstvi, s.cena_za_jednotku, s.jednotka, s.celkova_cena]
+          .forEach(v => {
+            const td = document.createElement('td');
+            td.textContent = v;
+            tr.appendChild(td);
+          });
+        const td = document.createElement('td');
+        td.innerHTML = `
+          <form action="/smazat-ze-skladu" method="POST">
+            <input type="hidden" name="id" value="${s.id}">
+            <button class="btn-delete">🗑️</button>
+          </form>`;
+        tr.appendChild(td);
+        t.appendChild(tr);
+      });
+      c.appendChild(t);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+:root {
+  --clr-bg:       #212121;
+  --clr-surface:  #2c2c2c;
+  --clr-primary:  #ffc107;
+  --clr-accent:   #ffeb3b;
+  --clr-text:     #ffffff;
+  --clr-border:   #ffc107;
+  --font:         'Roboto', sans-serif;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background: var(--clr-bg);
+  color:      var(--clr-text);
+  font-family:var(--font);
+  line-height:1.5;
+}
+
+header {
+  background: var(--clr-primary);
+  color:      var(--clr-bg);
+  display: flex; align-items:center; padding:1rem;
+}
+header .icon { font-size:1.5rem; margin-right:0.5rem; }
+header nav { margin-left:auto; }
+header nav a {
+  color: var(--clr-bg); text-decoration:none;
+  background: var(--clr-accent);
+  padding:0.3rem 0.6rem; border-radius:3px; font-weight:500;
+}
+header nav a:hover { background: var(--clr-primary); }
+
+main.container {
+  max-width:900px; margin:1.5rem auto; padding:0 1rem;
+}
+
+.form-section,
+.table-section {
+  background: var(--clr-surface);
+  border:1px solid var(--clr-border);
+  border-radius:4px; padding:1rem; margin-bottom:1.5rem;
+}
+.form-section h2,
+.table-section h2 { margin-bottom:0.75rem; }
+
+.form-section form label {
+  display:block; margin:0.5rem 0 0.25rem; font-weight:500;
+}
+.form-section form input,
+.form-section form select,
+.form-section form button {
+  width:100%; padding:0.5rem; margin-bottom:0.75rem;
+  border:1px solid var(--clr-border);
+  border-radius:3px;
+  background:var(--clr-bg); color:var(--clr-text);
+}
+.form-section form button {
+  background:var(--clr-primary); cursor:pointer;
+  transition:background .2s;
+}
+.form-section form button:hover {
+  background:var(--clr-accent);
+}
+
+/* materiály v řádku */
+.materials-list .material-line {
+  display:flex; gap:0.5rem; margin-bottom:0.5rem;
+}
+.materials-list select,
+.materials-list input { flex:1; }
+.materials-list button {
+  background:transparent; border:none;
+  color:var(--clr-accent); font-size:1.3rem; cursor:pointer;
+}
+.materials-list button:hover { color:var(--clr-primary); }
+
+/* tabulka */
+.table-section table {
+  width:100%; border-collapse:collapse;
+}
+.table-section th,
+.table-section td {
+  padding:0.75rem; border:1px solid var(--clr-border); text-align:left;
+}
+.table-section th { background:var(--clr-bg); }
+
+/* truncated + tlačítka */
+.truncated {
+  max-width:200px; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.btn-pdf,
+.btn-delete {
+  background:transparent; border:none;
+  cursor:pointer; font-size:1.2rem;
+}
+.btn-pdf { color:var(--clr-primary); }
+.btn-pdf:hover { color:var(--clr-accent); }
+.btn-delete { color:var(--clr-text); }
+.btn-delete:hover { color:var(--clr-accent); }

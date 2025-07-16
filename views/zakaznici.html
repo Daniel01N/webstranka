@@ -1,0 +1,78 @@
+<!-- File: views/zakaznici.html -->
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Zákazníci – ElektroSpráva</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <span class="icon">⚡</span> ElektroSpráva – Zákazníci
+    <nav><a href="/">Domů</a></nav>
+  </header>
+
+  <main class="container">
+    <section class="form-section">
+      <form action="/pridat-zakaznika" method="POST">
+        <label for="jmeno">Jméno</label>
+        <input id="jmeno" name="jmeno" required>
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email">
+
+        <label for="telefon">Telefon</label>
+        <input id="telefon" name="telefon">
+
+        <label for="adresa">Adresa</label>
+        <input id="adresa" name="adresa">
+
+        <button type="submit">➕ Přidat zákazníka</button>
+      </form>
+    </section>
+
+    <section class="table-section">
+      <h2>Seznam zákazníků</h2>
+      <div id="zakazniciList">Načítám…</div>
+    </section>
+  </main>
+
+  <script>
+    fetch('/api/zakaznici')
+      .then(r => r.json())
+      .then(data => {
+        const c = document.getElementById('zakazniciList');
+        c.innerHTML = '';
+        const t = document.createElement('table');
+        const h = document.createElement('tr');
+        ['ID','Jméno','Email','Telefon','Adresa','Akce']
+          .forEach(txt => {
+            const th = document.createElement('th');
+            th.textContent = txt;
+            h.appendChild(th);
+          });
+        t.appendChild(h);
+
+        data.forEach(z => {
+          const tr = document.createElement('tr');
+          [z.id, z.jmeno, z.email, z.telefon, z.adresa]
+            .forEach(v => {
+              const td = document.createElement('td');
+              td.textContent = v;
+              tr.appendChild(td);
+            });
+          const td = document.createElement('td');
+          td.innerHTML = `
+            <form action="/smazat-zakaznika" method="POST">
+              <input type="hidden" name="id" value="${z.id}">
+              <button class="btn-delete">🗑️</button>
+            </form>`;
+          tr.appendChild(td);
+          t.appendChild(tr);
+        });
+        c.appendChild(t);
+      });
+  </script>
+</body>
+</html>

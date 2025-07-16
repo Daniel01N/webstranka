@@ -1,0 +1,198 @@
+<!-- File: views/zakazky.html -->
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Zakázky – ElektroSpráva</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    /* specifické styly pro stránku Zakázky */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .form-section,
+    .table-section {
+      background: var(--clr-surface);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--clr-border);
+      border-radius: 4px;
+    }
+    .materials-list { margin: 1rem 0; }
+    .material-line {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .material-line select,
+    .material-line input {
+      flex: 1;
+    }
+    .material-line button {
+      background: transparent;
+      border: none;
+      color: var(--clr-accent);
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+    .material-line button:hover {
+      color: var(--clr-primary);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="icon">⚡</span> ElektroSpráva – Zakázky
+    <nav><a href="/">Domů</a></nav>
+  </header>
+
+  <main class="container">
+    <!-- Formulář pro novou zakázku -->
+    <section class="form-section">
+      <h2>Vytvořit novou zakázku</h2>
+      <form action="/pridat-zakazku" method="POST">
+        <label for="zakaznik">Zákazník</label>
+        <select id="zakaznik" name="zakaznik_id" required>
+          <option value="">Načítám…</option>
+        </select>
+
+        <label for="datum">Datum zakázky</label>
+        <input id="datum" name="datum" type="date" required>
+
+        <div id="materialsContainer" class="materials-list"></div>
+        <button type="button" onclick="addLine()">➕ Přidat materiál</button>
+
+        <label for="totalPrice">Celkem (Kč)</label>
+        <input id="totalPrice" name="celkova_cena" readonly>
+
+        <button type="submit">✅ Potvrdit zakázku</button>
+      </form>
+    </section>
+
+    <!-- Tabulka existujících zakázek -->
+    <section class="table-section">
+      <h2>Seznam zakázek</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Zákazník</th>
+            <th>Datum</th>
+            <th>Celkem Kč</th>
+            <th>Materiály</th>
+            <th>Akce</th>
+          </tr>
+        </thead>
+        <tbody id="zakazkyBody">
+          <tr><td colspan="6" style="text-align:center">Načítám…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    let materials = [];
+
+    // Načtení dat: zákazníci, materiály, zakázky
+    Promise.all([
+      fetch('/api/zakaznici').then(r=>r.json()),
+      fetch('/api/materialy').then(r=>r.json()),
+      fetch('/api/zakazky').then(r=>r.json())
+    ]).then(([custs, mats, orders]) => {
+      materials = mats;
+      initCustomerSelect(custs);
+      renderOrders(orders);
+    });
+
+    // naplní <select> zákazníků
+    function initCustomerSelect(custs) {
+      const sel = document.querySelector('select[name=zakaznik_id]');
+      sel.innerHTML = '<option value="">Vyber zákazníka</option>';
+      custs.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = c.jmeno;
+        sel.appendChild(o);
+      });
+    }
+
+    // přidá řádek výběru materiálu + množství
+    function addLine() {
+      const cont = document.getElementById('materialsContainer');
+      const div  = document.createElement('div');
+      div.className = 'material-line';
+
+      const sel = document.createElement('select');
+      sel.name = 'material_id';
+      materials.forEach(m => {
+        const o = document.createElement('option');
+        o.value = m.id;
+        o.textContent = `${m.nazev} (${m.cena_za_jednotku} Kč/${m.jednotka})`;
+        sel.appendChild(o);
+      });
+      sel.onchange = recalc;
+      div.appendChild(sel);
+
+      const inp = document.createElement('input');
+      inp.name = 'mnozstvi';
+      inp.type = 'number';
+      inp.min = 1;
+      inp.value = 1;
+      inp.oninput = recalc;
+      div.appendChild(inp);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '🗑️';
+      btn.onclick = () => { div.remove(); recalc(); };
+      div.appendChild(btn);
+
+      cont.appendChild(div);
+      recalc();
+    }
+
+    // přepočítá celkovou cenu
+    function recalc() {
+      let sum = 0;
+      document.querySelectorAll('.material-line').forEach(div => {
+        const sel = div.querySelector('select');
+        const inp = div.querySelector('input');
+        const mat = materials.find(m => m.id == sel.value);
+        const qty = parseFloat(inp.value);
+        if (mat && qty) sum += mat.cena_za_jednotku * qty;
+      });
+      document.getElementById('totalPrice').value = sum.toFixed(2);
+    }
+
+    // vykreslí seznam zakázek do tabulky
+    function renderOrders(orders) {
+      const tbody = document.getElementById('zakazkyBody');
+      tbody.innerHTML = '';
+      if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Žádné zakázky</td></tr>';
+        return;
+      }
+      orders.forEach(o => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${o.id}</td>
+          <td>${o.jmeno}</td>
+          <td>${o.datum}</td>
+          <td>${o.celkova_cena}</td>
+          <td>${o.materialy || '–'}</td>
+          <td>
+            <form action="/smazat-zakazku" method="POST" style="display:inline">
+              <input type="hidden" name="id" value="${o.id}">
+              <button class="btn-delete">🗑️</button>
+            </form>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>

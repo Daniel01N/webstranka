@@ -1,0 +1,248 @@
+const express    = require('express');
+const path       = require('path');
+const mysql      = require('mysql');
+const PDFDocument= require('pdfkit');
+const moment     = require('moment');
+
+const app = express();
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'views')));
+
+// připojení k DB pomocí Railway ENV proměnných
+const db = mysql.createConnection({
+  host:     process.env.MYSQL_HOST,
+  user:     process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE
+});
+db.connect(err => {
+  if (err) {
+    console.error('❌ Chyba DB:', err);
+    process.exit(1);
+  }
+  console.log('✅ Připojeno k DB');
+});
+
+/* ===== API: MATERIALY ===== */
+app.get('/api/materialy', (req, res) => {
+  db.query('SELECT * FROM materialy', (err, rows) => {
+    if (err) return res.status(500).json({ error: err.sqlMessage });
+    res.json(rows);
+  });
+});
+
+app.post('/pridat-material', (req, res) => {
+  const { nazev, cena, jednotka } = req.body;
+  db.query(
+    'INSERT INTO materialy (nazev, cena_za_jednotku, jednotka) VALUES (?, ?, ?)',
+    [nazev, cena, jednotka],
+    err => {
+      if (err) return res.status(500).send(err.sqlMessage);
+      res.redirect('/materialy.html');
+    }
+  );
+});
+
+app.post('/smazat-material', (req, res) => {
+  const { id } = req.body;
+  db.query('DELETE FROM materialy WHERE id = ?', [id], err => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    res.redirect('/materialy.html');
+  });
+});
+
+/* ===== API: SKLAD ===== */
+app.get('/api/sklad', (req, res) => {
+  const sql = `
+    SELECT s.id, m.nazev, s.mnozstvi,
+           m.cena_za_jednotku, m.jednotka, s.celkova_cena
+    FROM sklad s
+    JOIN materialy m ON s.material_id = m.id
+  `;
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.sqlMessage });
+    res.json(rows);
+  });
+});
+
+app.post('/pridat-do-skladu', (req, res) => {
+  const { material_id, mnozstvi } = req.body;
+  db.query(
+    'SELECT cena_za_jednotku FROM materialy WHERE id = ?',
+    [material_id],
+    (err, result) => {
+      if (err) return res.status(500).send(err.sqlMessage);
+      const cenaJednotkova = result[0].cena_za_jednotku;
+      const celkovaCena    = cenaJednotkova * parseFloat(mnozstvi);
+      db.query(
+        'INSERT INTO sklad (material_id, mnozstvi, celkova_cena) VALUES (?, ?, ?)',
+        [material_id, mnozstvi, celkovaCena],
+        err2 => {
+          if (err2) return res.status(500).send(err2.sqlMessage);
+          res.redirect('/sklad.html');
+        }
+      );
+    }
+  );
+});
+
+app.post('/smazat-ze-skladu', (req, res) => {
+  const { id } = req.body;
+  db.query('DELETE FROM sklad WHERE id = ?', [id], err => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    res.redirect('/sklad.html');
+  });
+});
+
+/* ===== API: ZÁKAZNÍCI ===== */
+app.get('/api/zakaznici', (req, res) => {
+  db.query('SELECT * FROM zakaznici', (err, rows) => {
+    if (err) return res.status(500).json({ error: err.sqlMessage });
+    res.json(rows);
+  });
+});
+
+app.post('/pridat-zakaznika', (req, res) => {
+  const { jmeno, email, telefon, adresa } = req.body;
+  db.query(
+    'INSERT INTO zakaznici (jmeno, email, telefon, adresa) VALUES (?, ?, ?, ?)',
+    [jmeno, email, telefon, adresa],
+    err => {
+      if (err) return res.status(500).send(err.sqlMessage);
+      res.redirect('/zakaznici.html');
+    }
+  );
+});
+
+app.post('/smazat-zakaznika', (req, res) => {
+  const { id } = req.body;
+  db.query('DELETE FROM zakaznici WHERE id = ?', [id], err => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    res.redirect('/zakaznici.html');
+  });
+});
+
+/* ===== API: ZAKÁZKY ===== */
+app.get('/api/zakazky', (req, res) => {
+  const sql = `
+    SELECT z.id, z.datum, z.celkova_cena, k.jmeno,
+      GROUP_CONCAT(
+        CONCAT(m.nazev, ' (', zm.mnozstvi, '×', m.cena_za_jednotku, ' Kč)')
+        SEPARATOR ', '
+      ) AS materialy
+    FROM zakazky z
+    JOIN zakaznici k ON z.zakaznik_id = k.id
+    LEFT JOIN zakazka_materialy zm ON z.id = zm.zakazka_id
+    LEFT JOIN materialy m ON zm.material_id = m.id
+    GROUP BY z.id
+  `;
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.sqlMessage });
+    res.json(rows);
+  });
+});
+
+app.post('/pridat-zakazku', (req, res) => {
+  let { zakaznik_id, datum, celkova_cena, material_id, mnozstvi } = req.body;
+  if (material_id && !Array.isArray(material_id)) {
+    material_id = [material_id];
+    mnozstvi   = [mnozstvi];
+  }
+  db.query(
+    'INSERT INTO zakazky (zakaznik_id, datum, celkova_cena) VALUES (?, ?, ?)',
+    [zakaznik_id, datum, celkova_cena],
+    (err, result) => {
+      if (err) return res.status(500).send(err.sqlMessage);
+      const zakId = result.insertId;
+      db.query(
+        'SELECT id, cena_za_jednotku FROM materialy WHERE id IN (?)',
+        [material_id],
+        (err2, ceny) => {
+          if (err2) return res.status(500).send(err2.sqlMessage);
+          const map = {};
+          ceny.forEach(m => (map[m.id] = m.cena_za_jednotku));
+          const values = material_id.map((mid, i) => [
+            zakId,
+            mid,
+            parseFloat(mnozstvi[i]),
+            map[mid] * parseFloat(mnozstvi[i])
+          ]);
+          db.query(
+            'INSERT INTO zakazka_materialy (zakazka_id, material_id, mnozstvi, cena) VALUES ?',
+            [values],
+            err3 => {
+              if (err3) return res.status(500).send(err3.sqlMessage);
+              res.redirect('/zakazky.html');
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+app.post('/smazat-zakazku', (req, res) => {
+  const { id } = req.body;
+  db.query('DELETE FROM zakazky WHERE id = ?', [id], err => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    db.query('DELETE FROM zakazka_materialy WHERE zakazka_id = ?', [id], () => {
+      res.redirect('/zakazky.html');
+    });
+  });
+});
+
+/* ===== PDF routa ===== */
+app.get('/zakazka-pdf/:id', (req, res) => {
+  const zakId = req.params.id;
+  const sqlH = `
+    SELECT z.id, z.datum, z.celkova_cena,
+           k.jmeno, k.email, k.telefon, k.adresa
+    FROM zakazky z
+    JOIN zakaznici k ON z.zakaznik_id = k.id
+    WHERE z.id = ?
+  `;
+  db.query(sqlH, [zakId], (e1, hdr) => {
+    if (e1 || hdr.length === 0) return res.status(404).send('Nenalezena');
+    const h = hdr[0];
+    const sqlI = `
+      SELECT m.nazev, zm.mnozstvi, zm.cena
+      FROM zakazka_materialy zm
+      JOIN materialy m ON zm.material_id = m.id
+      WHERE zm.zakazka_id = ?
+    `;
+    db.query(sqlI, [zakId], (e2, items) => {
+      if (e2) return res.status(500).send('Chyba');
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      res.setHeader('Content-disposition', `inline; filename=zak_${zakId}.pdf`);
+      res.setHeader('Content-type', 'application/pdf');
+      doc.pipe(res);
+      doc.fontSize(20).text(`Zakázka #${h.id}`, { align: 'center' }).moveDown();
+      doc.fontSize(12)
+         .text(`Datum: ${moment(h.datum).format('DD.MM.YYYY')}`)
+         .text(`Zákazník: ${h.jmeno}`)
+         .text(`Email: ${h.email||'–'}`)
+         .text(`Telefon: ${h.telefon||'–'}`)
+         .text(`Adresa: ${h.adresa||'–'}`)
+         .moveDown();
+      doc.fontSize(14).text('Položky:', { underline: true }).moveDown(0.5);
+      const y0 = doc.y, cols = { naz:50, mno:330, cen:430 };
+      doc.fontSize(12).text('Název',cols.naz,y0).text('Množství',cols.mno,y0).text('Cena',cols.cen,y0);
+      doc.moveTo(50,y0+15).lineTo(550,y0+15).stroke();
+      let y = y0 + 20;
+      items.forEach(it => {
+        doc.text(it.nazev,cols.naz,y)
+           .text(it.mnozstvi.toString(),cols.mno,y)
+           .text(it.cena.toFixed(2),cols.cen,y);
+        y += 20;
+      });
+      doc.moveDown().fontSize(14)
+         .text(`Celkem: ${h.celkova_cena.toFixed(2)} Kč`, { align: 'right' });
+      doc.end();
+    });
+  });
+});
+
+// spuštění
+app.listen(process.env.PORT||3000, () => {
+  console.log('🚀 Server běží…');
+});
