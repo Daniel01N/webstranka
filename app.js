@@ -214,3 +214,10 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server běží na portu ${PORT}`);
 });
+const connection = mysql.createConnection({
+  host: '127.0.0.1',       // ✗ tu máš pořád localhost
+  user: 'root',            // ✗ zde root
+  password: '',
+  database: 'elektroservis',
+  port: 3306
+});
